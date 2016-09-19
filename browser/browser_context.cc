@@ -27,6 +27,8 @@
 #include "net/base/escape.h"
 #include "net/ssl/client_cert_store.h"
 
+#include "components/component_updater/component_updater_paths.h"
+
 #if defined(USE_NSS_CERTS)
 #include "net/ssl/client_cert_store_nss.h"
 #elif defined(OS_WIN)
@@ -104,6 +106,13 @@ BrowserContext::BrowserContext(const std::string& partition, bool in_memory)
     path_ = path_.Append(base::FilePath::FromUTF8Unsafe(GetApplicationName()));
     PathService::Override(DIR_USER_DATA, path_);
   }
+
+  if (!PathService::Get(component_updater::DIR_COMPONENT_USER, &path_)) {
+    base::FilePath component_path =
+      path_.Append(FILE_PATH_LITERAL("Extensions"));
+    PathService::Override(component_updater::DIR_COMPONENT_USER, component_path);
+  }
+
 
   if (!in_memory_ && !partition.empty())
     path_ = path_.Append(FILE_PATH_LITERAL("Partitions"))

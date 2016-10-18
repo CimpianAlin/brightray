@@ -78,6 +78,7 @@ class BrowserContext : public base::RefCounted<BrowserContext>,
   void InitPrefs();
   PrefService* prefs() { return prefs_.get(); }
 
+  base::FilePath GetPath() const override;
  protected:
   BrowserContext(const std::string& partition, bool in_memory);
   ~BrowserContext() override;
@@ -87,8 +88,6 @@ class BrowserContext : public base::RefCounted<BrowserContext>,
 
   // URLRequestContextGetter::Delegate:
   net::NetworkDelegate* CreateNetworkDelegate() override;
-
-  base::FilePath GetPath() const override;
 
  private:
   friend class base::RefCounted<BrowserContext>;

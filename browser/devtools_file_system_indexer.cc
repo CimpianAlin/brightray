@@ -42,7 +42,7 @@ typedef int32_t Trigram;
 typedef char TrigramChar;
 typedef uint16_t FileId;
 
-const int kMinTimeoutBetweenWorkedNotification = 200;
+const int kMinTimeoutBetweenWorkedNitification = 200;
 // Trigram characters include all ASCII printable characters (32-126) except for
 // the capital letters, because the index is case insensitive.
 const size_t kTrigramCharacterCount = 126 - 'Z' - 1 + 'A' - ' ' + 1;
@@ -52,11 +52,6 @@ const int kMaxReadLength = 10 * 1024;
 const TrigramChar kUndefinedTrigramChar = -1;
 const TrigramChar kBinaryTrigramChar = -2;
 const Trigram kUndefinedTrigram = -1;
-
-template <typename Char>
-bool IsAsciiUpper(Char c) {
-  return c >= 'A' && c <= 'Z';
-}
 
 class Index {
  public:
@@ -100,7 +95,7 @@ TrigramChar TrigramCharForChar(char c) {
       char ch = static_cast<char>(i);
       if (ch == '\t')
         ch = ' ';
-      if (IsAsciiUpper(ch))
+      if (base::IsAsciiUpper(ch))
         ch = ch - 'A' + 'a';
 
       bool is_binary_char = ch < 9 || (ch >= 14 && ch < 32) || ch == 127;
@@ -160,7 +155,7 @@ void Index::SetTrigramsForFile(const FilePath& file_path,
                                const Time& time) {
   DCHECK_CURRENTLY_ON(BrowserThread::FILE);
   FileId file_id = GetFileId(file_path);
-  auto it = index.begin();
+  vector<Trigram>::const_iterator it = index.begin();
   for (; it != index.end(); ++it) {
     Trigram trigram = *it;
     index_[trigram].push_back(file_id);
@@ -267,8 +262,8 @@ DevToolsFileSystemIndexer::FileSystemIndexingJob::FileSystemIndexingJob(
       total_work_callback_(total_work_callback),
       worked_callback_(worked_callback),
       done_callback_(done_callback),
-      current_file_(BrowserThread::GetMessageLoopProxyForThread(
-                        BrowserThread::FILE).get()),
+      current_file_(
+          BrowserThread::GetTaskRunnerForThread(BrowserThread::FILE).get()),
       files_indexed_(0),
       stopped_(false) {
   current_trigrams_set_.resize(kTrigramCount);
@@ -429,7 +424,7 @@ void DevToolsFileSystemIndexer::FileSystemIndexingJob::ReportWorked() {
   bool should_send_worked_nitification = true;
   if (!last_worked_notification_time_.is_null()) {
     TimeDelta delta = current_time - last_worked_notification_time_;
-    if (delta.InMilliseconds() < kMinTimeoutBetweenWorkedNotification)
+    if (delta.InMilliseconds() < kMinTimeoutBetweenWorkedNitification)
       should_send_worked_nitification = false;
   }
   ++files_indexed_;

@@ -5,6 +5,7 @@
 
 #include "browser/inspectable_web_contents_impl.h"
 
+#include "base/base64.h"
 #include "base/json/json_reader.h"
 #include "base/json/json_writer.h"
 #include "base/metrics/histogram.h"
@@ -173,15 +174,22 @@ int ResponseWriter::Initialize(const net::CompletionCallback& callback) {
 int ResponseWriter::Write(net::IOBuffer* buffer,
                           int num_bytes,
                           const net::CompletionCallback& callback) {
-  auto* id = new base::FundamentalValue(stream_id_);
-  base::StringValue* chunk =
-      new base::StringValue(std::string(buffer->data(), num_bytes));
+  std::string chunk = std::string(buffer->data(), num_bytes);
+  bool encoded = false;
+  if (!base::IsStringUTF8(chunk)) {
+    encoded = true;
+    base::Base64Encode(chunk, &chunk);
+  }
+
+  base::FundamentalValue* id = new base::FundamentalValue(stream_id_);
+  base::StringValue* chunkValue = new base::StringValue(chunk);
+  base::FundamentalValue* encodedValue = new base::FundamentalValue(encoded);
 
   content::BrowserThread::PostTask(
       content::BrowserThread::UI, FROM_HERE,
-      base::Bind(&InspectableWebContentsImpl::CallClientFunction,
-                 bindings_, "DevToolsAPI.streamWrite",
-                 base::Owned(id), base::Owned(chunk), nullptr));
+      base::Bind(&InspectableWebContentsImpl::CallClientFunction, bindings_,
+                 "DevToolsAPI.streamWrite", base::Owned(id),
+                 base::Owned(chunkValue), base::Owned(encodedValue)));
   return num_bytes;
 }
 
@@ -238,7 +246,10 @@ InspectableWebContentsImpl::InspectableWebContentsImpl(
 }
 
 InspectableWebContentsImpl::~InspectableWebContentsImpl() {
-  Observe(nullptr);
+  if (web_contents_) {
+    CloseContents(web_contents_);
+    delete web_contents_;
+  }
 }
 
 InspectableWebContentsView* InspectableWebContentsImpl::GetView() const {
@@ -246,7 +257,7 @@ InspectableWebContentsView* InspectableWebContentsImpl::GetView() const {
 }
 
 content::WebContents* InspectableWebContentsImpl::GetWebContents() const {
-  return web_contents_.get();
+  return web_contents_;
 }
 
 content::WebContents* InspectableWebContentsImpl::GetDevToolsWebContents() const {
@@ -283,7 +294,7 @@ void InspectableWebContentsImpl::ShowDevTools() {
     Observe(devtools_web_contents_.get());
     devtools_web_contents_->SetDelegate(this);
 
-    agent_host_ = content::DevToolsAgentHost::GetOrCreateFor(web_contents_.get());
+    agent_host_ = content::DevToolsAgentHost::GetOrCreateFor(web_contents_);
     agent_host_->AttachClient(this);
 
     devtools_web_contents_->GetController().LoadURL(
@@ -300,7 +311,8 @@ void InspectableWebContentsImpl::CloseDevTools() {
   if (devtools_web_contents_) {
     view_->CloseDevTools();
     devtools_web_contents_.reset();
-    web_contents_->Focus();
+    if (web_contents_)
+      web_contents_->Focus();
   }
 }
 
@@ -630,14 +642,8 @@ void InspectableWebContentsImpl::RenderFrameHostChanged(
 }
 
 void InspectableWebContentsImpl::WebContentsDestroyed() {
-  frontend_loaded_ = false;
-  Detach();
-
-  for (const auto& pair : pending_requests_)
-    delete pair.first;
-
-  if (view_ && view_->GetDelegate())
-    view_->GetDelegate()->DevToolsClosed();
+  CloseContents(web_contents_);
+  web_contents_ = nullptr;
 }
 
 bool InspectableWebContentsImpl::AddMessageToConsole(
@@ -673,6 +679,13 @@ void InspectableWebContentsImpl::HandleKeyboardEvent(
 }
 
 void InspectableWebContentsImpl::CloseContents(content::WebContents* source) {
+  Observe(nullptr);
+  frontend_loaded_ = false;
+  Detach();
+
+  for (const auto& pair : pending_requests_)
+    delete pair.first;
+
   CloseDevTools();
 }
 

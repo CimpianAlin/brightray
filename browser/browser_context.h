@@ -75,7 +75,7 @@ class BrowserContext : public base::RefCounted<BrowserContext>,
     return &network_controller_handle_;
   }
 
-  void InitPrefs();
+  void InitPrefs(scoped_refptr<base::SequencedTaskRunner> task_runner);
   PrefService* prefs() { return prefs_.get(); }
 
   base::FilePath GetPath() const override;

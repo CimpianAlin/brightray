@@ -6,7 +6,7 @@
 
 class DevToolsContentsResizingStrategy;
 
-#if defined(TOOLKIT_VIEWS)
+#if defined(USE_ASH)
 namespace views {
 class View;
 }
@@ -29,7 +29,7 @@ class InspectableWebContentsView {
     return delegate_;
   }
 
-#if defined(TOOLKIT_VIEWS)
+#if defined(USE_ASH)
   // Returns the container control, which has devtools view attached.
   virtual views::View* GetView() = 0;
 

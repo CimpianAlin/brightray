@@ -46,7 +46,7 @@ bool SubprocessNeedsResourceBundle(const std::string& process_type) {
 void InitializeResourceBundle(const std::string& locale) {
   // Load locales.
   ui::ResourceBundle::InitSharedInstanceWithLocale(
-      locale, nullptr, ui::ResourceBundle::DO_NOT_LOAD_COMMON_RESOURCES);
+      locale, nullptr, ui::ResourceBundle::LOAD_COMMON_RESOURCES);
 
   // Load other resource files.
   base::FilePath path;
@@ -55,23 +55,17 @@ void InitializeResourceBundle(const std::string& locale) {
 #else
   base::FilePath pak_dir;
   PathService::Get(base::DIR_MODULE, &pak_dir);
-  path = pak_dir.Append(FILE_PATH_LITERAL("content_shell.pak"));
+  path = pak_dir.Append(FILE_PATH_LITERAL("electron_resources.pak"));
 #endif
 
   ui::ResourceBundle& bundle = ui::ResourceBundle::GetSharedInstance();
-  bundle.AddDataPackFromPath(path, ui::GetSupportedScaleFactors()[0]);
+  bundle.AddDataPackFromPath(path, ui::SCALE_FACTOR_NONE);
 #if !defined(OS_MACOSX)
   bundle.AddDataPackFromPath(
-      pak_dir.Append(FILE_PATH_LITERAL("blink_image_resources_200_percent.pak")),
-      ui::SCALE_FACTOR_200P);
+      pak_dir.Append(FILE_PATH_LITERAL("chrome_100_percent.pak")),
+      ui::SCALE_FACTOR_100P);
   bundle.AddDataPackFromPath(
-      pak_dir.Append(FILE_PATH_LITERAL("content_resources_200_percent.pak")),
-      ui::SCALE_FACTOR_200P);
-  bundle.AddDataPackFromPath(
-      pak_dir.Append(FILE_PATH_LITERAL("ui_resources_200_percent.pak")),
-      ui::SCALE_FACTOR_200P);
-  bundle.AddDataPackFromPath(
-      pak_dir.Append(FILE_PATH_LITERAL("views_resources_200_percent.pak")),
+      pak_dir.Append(FILE_PATH_LITERAL("chrome_200_percent.pak")),
       ui::SCALE_FACTOR_200P);
 #endif
 }
@@ -108,6 +102,11 @@ void MainDelegate::PreSandboxStartup() {
     std::string locale = cmd.GetSwitchValueASCII(switches::kLang);
     InitializeResourceBundle(locale);
   }
+}
+
+void MainDelegate::ProcessExiting(const std::string& process_type) {
+  if (SubprocessNeedsResourceBundle(process_type))
+    ResourceBundle::CleanupSharedInstance();
 }
 
 content::ContentBrowserClient* MainDelegate::CreateContentBrowserClient() {

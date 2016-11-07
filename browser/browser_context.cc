@@ -25,7 +25,6 @@
 #include "content/public/browser/resource_context.h"
 #include "content/public/browser/storage_partition.h"
 #include "net/base/escape.h"
-#include "components/component_updater/component_updater_paths.h"
 
 using content::BrowserThread;
 
@@ -84,13 +83,6 @@ BrowserContext::BrowserContext(const std::string& partition, bool in_memory)
     PathService::Override(DIR_USER_DATA, path_);
   }
 
-  if (!PathService::Get(component_updater::DIR_COMPONENT_USER, &path_)) {
-    base::FilePath component_path =
-      path_.Append(FILE_PATH_LITERAL("Extensions"));
-    PathService::Override(component_updater::DIR_COMPONENT_USER, component_path);
-  }
-
-
   if (!in_memory_ && !partition.empty())
     path_ = path_.Append(FILE_PATH_LITERAL("Partitions"))
                  .Append(base::FilePath::FromUTF8Unsafe(MakePartitionName(partition)));
@@ -101,17 +93,22 @@ BrowserContext::BrowserContext(const std::string& partition, bool in_memory)
 }
 
 BrowserContext::~BrowserContext() {
+  BrowserThread::PostTask(
+      BrowserThread::IO, FROM_HERE,
+      base::Bind(&URLRequestContextGetter::NotifyContextShuttingDown,
+        base::RetainedRef(url_request_getter_)));
+
   BrowserThread::DeleteSoon(BrowserThread::IO,
                             FROM_HERE,
                             resource_context_.release());
 }
 
-void BrowserContext::InitPrefs() {
+void BrowserContext::InitPrefs(
+    scoped_refptr<base::SequencedTaskRunner> task_runner) {
   auto prefs_path = GetPath().Append(FILE_PATH_LITERAL("Preferences"));
   PrefServiceFactory prefs_factory;
-  prefs_factory.SetUserPrefsFile(prefs_path,
-      JsonPrefStore::GetTaskRunnerForFile(
-          prefs_path, BrowserThread::GetBlockingPool()).get());
+  prefs_factory.set_async(true);
+  prefs_factory.SetUserPrefsFile(prefs_path, task_runner.get());
 
   auto registry = make_scoped_refptr(new PrefRegistrySimple);
   RegisterInternalPrefs(registry.get());

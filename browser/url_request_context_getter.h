@@ -69,6 +69,7 @@ class URLRequestContextGetter : public net::URLRequestContextGetter {
   net::HostResolver* host_resolver();
   net::URLRequestJobFactory* job_factory() const { return job_factory_; }
 
+  void NotifyContextShuttingDown();
  private:
   Delegate* delegate_;
 
@@ -92,6 +93,8 @@ class URLRequestContextGetter : public net::URLRequestContextGetter {
   content::URLRequestInterceptorScopedVector protocol_interceptors_;
 
   net::URLRequestJobFactory* job_factory_;  // weak ref
+
+  bool shutting_down_;
 
   DISALLOW_COPY_AND_ASSIGN(URLRequestContextGetter);
 };

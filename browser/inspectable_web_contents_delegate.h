@@ -2,6 +2,7 @@
 #define BRIGHTRAY_INSPECTABLE_WEB_CONTENTS_DELEGATE_H_
 
 #include <string>
+#include "base/files/file_path.h"
 
 namespace brightray {
 

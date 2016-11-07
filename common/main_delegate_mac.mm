@@ -28,7 +28,7 @@ base::FilePath GetFrameworksPath() {
 }
 
 base::FilePath GetResourcesPakFilePath() {
-  auto path = [base::mac::FrameworkBundle() pathForResource:@"content_shell" ofType:@"pak"];
+  auto path = [base::mac::FrameworkBundle() pathForResource:@"electron_resources" ofType:@"pak"];
   return base::mac::NSStringToFilePath(path);
 }
 

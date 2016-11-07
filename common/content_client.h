@@ -15,7 +15,7 @@ std::string GetBrightrayUserAgent();
 class ContentClient : public content::ContentClient {
  public:
   ContentClient();
-  ~ContentClient();
+  ~ContentClient() override;
 
  private:
   std::string GetProduct() const override;

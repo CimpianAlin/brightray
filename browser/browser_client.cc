@@ -76,8 +76,6 @@ content::PlatformNotificationService* BrowserClient::GetPlatformNotificationServ
 
 void BrowserClient::GetAdditionalAllowedSchemesForFileSystem(
     std::vector<std::string>* additional_schemes) {
-  additional_schemes->push_back(content::kChromeDevToolsScheme);
-  additional_schemes->push_back(content::kChromeUIScheme);
 }
 
 net::NetLog* BrowserClient::GetNetLog() {

@@ -130,7 +130,8 @@ URLRequestContextGetter::URLRequestContextGetter(
       io_loop_(io_loop),
       file_loop_(file_loop),
       protocol_interceptors_(std::move(protocol_interceptors)),
-      job_factory_(nullptr) {
+      job_factory_(nullptr),
+      shutting_down_(false) {
   // Must first be created on the UI thread.
   DCHECK(BrowserThread::CurrentlyOn(BrowserThread::UI));
 
@@ -148,9 +149,26 @@ URLRequestContextGetter::URLRequestContextGetter(
 }
 
 URLRequestContextGetter::~URLRequestContextGetter() {
-#if defined(USE_NSS_CERTS)
-  net::SetURLRequestContextForNSSHttpIO(NULL);
-#endif
+  // NotifyContextShuttingDown() must have been called.
+  DCHECK(!network_delegate_.get());
+  DCHECK(!url_request_context_.get());
+  DCHECK(!storage_.get());
+}
+
+void URLRequestContextGetter::NotifyContextShuttingDown() {
+  DCHECK_CURRENTLY_ON(BrowserThread::IO);
+
+  shutting_down_ = true;
+
+  #if defined(USE_NSS_CERTS)
+    net::SetURLRequestContextForNSSHttpIO(NULL);
+  #endif
+
+  network_delegate_.reset();
+  url_request_context_.reset();
+  storage_.reset();
+
+  net::URLRequestContextGetter::NotifyContextShuttingDown();
 }
 
 net::HostResolver* URLRequestContextGetter::host_resolver() {
@@ -159,6 +177,10 @@ net::HostResolver* URLRequestContextGetter::host_resolver() {
 
 net::URLRequestContext* URLRequestContextGetter::GetURLRequestContext() {
   DCHECK(BrowserThread::CurrentlyOn(BrowserThread::IO));
+
+  if (shutting_down_) {
+    return NULL;
+  }
 
   if (!url_request_context_.get()) {
     auto& command_line = *base::CommandLine::ForCurrentProcess();

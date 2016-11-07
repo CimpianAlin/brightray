@@ -29,7 +29,7 @@ base::FilePath GetResourcesPakFilePath();
 class MainDelegate : public content::ContentMainDelegate {
  public:
   MainDelegate();
-  ~MainDelegate();
+  ~MainDelegate() override;
 
  protected:
   // Subclasses can override this to provide their own ContentClient
@@ -49,7 +49,7 @@ class MainDelegate : public content::ContentMainDelegate {
 
   bool BasicStartupComplete(int* exit_code) override;
   void PreSandboxStartup() override;
-
+  void ProcessExiting(const std::string& process_type) override;
  private:
   content::ContentBrowserClient* CreateContentBrowserClient() override;
 

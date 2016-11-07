@@ -69,6 +69,7 @@ class InspectableWebContentsImpl :
   double GetDevToolsZoomLevel() const;
   void UpdateDevToolsZoomLevel(double level);
 
+  void WebContentsDestroyed() override;
  private:
   // DevToolsEmbedderMessageDispacher::Delegate
   void ActivateWindow() override;
@@ -128,7 +129,6 @@ class InspectableWebContentsImpl :
   // content::WebContentsObserver:
   void RenderFrameHostChanged(content::RenderFrameHost* old_host,
                               content::RenderFrameHost* new_host) override;
-  void WebContentsDestroyed() override;
   void OnWebContentsFocused() override;
   void DidStartNavigationToPendingEntry(
       const GURL& url,
@@ -185,7 +185,8 @@ class InspectableWebContentsImpl :
 
   PrefService* pref_service_;  // weak reference.
 
-  std::unique_ptr<content::WebContents> web_contents_;
+  content::WebContents* web_contents_;  // not owned
+
   std::unique_ptr<content::WebContents> devtools_web_contents_;
   std::unique_ptr<InspectableWebContentsView> view_;
 
